@@ -8,3 +8,7 @@ Qrels = Dict[str, Dict[str, int]]
 GroundTruth = Dict[str, List[str]]
 QueryPromptMaker = Callable[[str, RetrieverResults, Corpus, Queries], str]  # f(query_id, restriever_result, corpus, queries) -> LLM input
 GeneratorResults = Dict[str, str]  # query_id: answer
+
+MetricResponses = List[str]
+MetricReferences = List[List[str]]
+MetricQueries = List[str]
