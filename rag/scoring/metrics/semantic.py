@@ -9,15 +9,33 @@ from transformers import AutoModel, AutoTokenizer
 import torch
 
 from rusBeIR.rag.scoring.metrics.base import BaseMetric
+import rusBeIR.utils.type_hints as type_hints
 
 
 class BertScoreMetric(BaseMetric):
-    def __call__(self, generated_responses: tp.List[str], reference_responses: tp.List[str]) -> tp.Dict[str, float]:
-        P, R, F1 = bert_score(generated_responses, reference_responses, lang='en')
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            reference_responses: type_hints.MetricReferences,
+            **kwargs
+        )-> tp.Dict[str, float]:
+
+        bert_score_precision = []
+        bert_score_recall = []
+        bert_score_f1 = []
+
+        for gen, all_ref in zip(generated_responses, reference_responses):
+            generations = [gen] * len(all_ref)
+            P, R, F1 = bert_score(generations, all_ref, lang='ru')
+            
+            bert_score_precision.append(P.max().item())
+            bert_score_recall.append(R.max().item())
+            bert_score_f1.append(F1.max().item())
+
         return {
-            'bert_score_precision': P.mean().item(),
-            'bert_score_recall': R.mean().item(),
-            'bert_score_f1': F1.mean().item()
+            'bert_score_precision': np.mean(bert_score_precision),
+            'bert_score_recall': np.mean(bert_score_recall),
+            'bert_score_f1': np.mean(bert_score_f1)
         }
 
 
@@ -25,20 +43,32 @@ class SemanticSimilarityMetric(BaseMetric):
     def __init__(self):
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
         
-    def __call__(self, generated_responses: tp.List[str], reference_responses: tp.List[str]) -> tp.Dict[str, float]:
-        gen_embeddings = self.model.encode(generated_responses)
-        ref_embeddings = self.model.encode(reference_responses)
-        
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            reference_responses: type_hints.MetricReferences,
+            **kwargs
+        ) -> tp.Dict[str, float]:
+
         similarities = []
-        for gen_emb, ref_emb in zip(gen_embeddings, ref_embeddings):
-            similarity = 1 - cosine(gen_emb, ref_emb)
-            similarities.append(similarity)
+
+        for gen, all_ref in zip(generated_responses, reference_responses):
+
+            gen_embedding = self.model.encode(gen)
+            ref_embeddings = self.model.encode(all_ref)
+        
+            intermediate_similarities = []
+            for ref_embedding in ref_embeddings:
+                similarity = 1 - cosine(gen_embedding, ref_embedding)
+                intermediate_similarities.append(similarity)
+
+            similarities.append(np.max(intermediate_similarities))
             
         return {'semantic_similarity': np.mean(similarities)}
     
 
 class CustomSemanticSimilairty(BaseMetric):
-    def init(self, model_name: str = 'bert-base-uncased'):
+    def __init__(self, model_name: str = 'bert-base-uncased'):
         self.model_name = model_name
         self.model = AutoModel.from_pretrained(model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -52,18 +82,29 @@ class CustomSemanticSimilairty(BaseMetric):
         
         with torch.no_grad():
             outputs = self.model(**inputs)
-            embeddings = outputs.last_hidden_state.mean(dim=1)
+            embeddings = outputs.last_hidden_state.mean(dim=1) # TODO: clarify if division by attention mask is required here
             
         return embeddings
         
-    def __call__(self, generated_responses: tp.List[str], reference_responses: tp.List[str]) -> tp.Dict[str, float]:
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            reference_responses: type_hints.MetricReferences,
+            **kwargs
+        ) -> tp.Dict[str, float]:
         scores = []
         
-        for gen, ref in zip(generated_responses, reference_responses):
+        for gen, all_ref in zip(generated_responses, reference_responses):
             gen_emb = self._get_embeddings(gen)
-            ref_emb = self._get_embeddings(ref)
+
+            intermediate_scores = []
+
+            for ref in all_ref:
+                ref_emb = self._get_embeddings(ref)
             
-            score = torch.cosine_similarity(gen_emb, ref_emb).item()
-            scores.append(score)
+                score = torch.cosine_similarity(gen_emb, ref_emb).item()
+                intermediate_scores.append(score)
+            
+            scores.append(np.max(intermediate_scores))
             
         return {f'bertscore_custom | {self.model_name}': np.mean(scores)}

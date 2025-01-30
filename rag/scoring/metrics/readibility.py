@@ -4,9 +4,14 @@ import textstat
 import numpy as np
 
 from rusBeIR.rag.scoring.metrics.base import BaseMetric
+import rusBeIR.utils.type_hints as type_hints
 
 class ReadabilityMetrics(BaseMetric):
-    def __call__(self, generated_responses: tp.List[str], reference_responses: tp.List[str]) -> tp.Dict[str, float]:
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            **kwargs
+        ) -> tp.Dict[str, float]:
         scores = {
             'flesch_reading_ease': [],
             'gunning_fog': [],
