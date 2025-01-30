@@ -7,24 +7,22 @@ from transformers import pipeline
 from nltk.tokenize import sent_tokenize
 
 from rusBeIR.rag.scoring.metrics.base import BaseMetric
+import rusBeIR.utils.type_hints as type_hints
 
 
-class BaseRagMetric(BaseMetric):
-
-    @abstractmethod
-    def __call__(self, generated_responses: tp.List[str], reference_responses: tp.List[str], 
-                 context_passages: tp.List[str]) -> tp.Dict[str, float]:
-        raise NotImplementedError()
-
-
-class RAGContextRelevanceMetric(BaseRagMetric):
+class RAGContextRelevanceMetric(BaseMetric):
     def __init__(self):
-        self.nlp = spacy.load('en_core_web_lg')
+        try:
+            self.nlp = spacy.load('ru_core_news_lg')
+        except:
+            spacy.cli.download("ru_core_news_lg")
+            self.nlp = spacy.load('ru_core_news_lg')
         
-    def __call__(self, 
-                 generated_responses: tp.List[str], 
-                 context_passages: tp.List[str],
-                 reference_responses: tp.Optional[tp.List[str]]=None
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            context_passages: type_hints.MetricContext,
+            **kwargs
         ) -> tp.Dict[str, float]:
         scores = []
         
@@ -39,18 +37,23 @@ class RAGContextRelevanceMetric(BaseRagMetric):
         return {'context_relevance': np.mean(scores)}
 
 
-class SourceAttributionMetric(BaseRagMetric):
+class SourceAttributionMetric(BaseMetric):
     def __init__(self):
-        self.nlp = spacy.load('en_core_web_lg')
+        try:
+            self.nlp = spacy.load('ru_core_news_lg')
+        except:
+            spacy.cli.download("ru_core_news_lg")
+            self.nlp = spacy.load('ru_core_news_lg')
         
     def _extract_entities(self, text: str) -> tp.Set[str]:
         doc = self.nlp(text)
         return {ent.text.lower() for ent in doc.ents}
         
-    def __call__(self, 
-                 generated_responses: tp.List[str],
-                 context_passages: tp.List[str],
-                 reference_responses: tp.Optional[tp.List[str]]=None
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            context_passages: type_hints.MetricContext,
+            **kwargs
         ) -> tp.Dict[str, float]:
         scores = []
         
@@ -69,10 +72,15 @@ class SourceAttributionMetric(BaseRagMetric):
         return {'source_attribution': np.mean(scores)}
 
 
-class FactualConsistencyMetric(BaseRagMetric):
+class FactualConsistencyMetric(BaseMetric):
     def __init__(self):
         self.qa_pipeline = pipeline('question-answering')
-        self.nlp = spacy.load('en_core_web_lg')
+        
+        try:
+            self.nlp = spacy.load('ru_core_news_lg')
+        except:
+            spacy.cli.download("ru_core_news_lg")
+            self.nlp = spacy.load('ru_core_news_lg')
         
     def _extract_facts(self, text: str) -> tp.List[str]:
         """Извлекает факты из текста в виде простых предложений"""
@@ -87,10 +95,11 @@ class FactualConsistencyMetric(BaseRagMetric):
                 
         return facts
         
-    def __call__(self, 
-                 generated_responses: tp.List[str], 
-                 context_passages: tp.List[str], 
-                 reference_responses: tp.Optional[tp.List[str]]=None
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            context_passages: type_hints.MetricContext,
+            **kwargs
         ) -> tp.Dict[str, float]:
         consistency_scores = []
         
@@ -117,15 +126,21 @@ class FactualConsistencyMetric(BaseRagMetric):
         return {'factual_consistency': np.mean(consistency_scores)}
 
 
-class HallucinationDetectionMetric(BaseRagMetric):
+class HallucinationDetectionMetric(BaseMetric):
     def __init__(self):
         self.nli_pipeline = pipeline('zero-shot-classification')
-        self.nlp = spacy.load('en_core_web_lg')
         
-    def __call__(self, 
-                 generated_responses: tp.List[str],
-                 context_passages: tp.List[str],
-                 reference_responses: tp.Optional[tp.List[str]]=None
+        try:
+            self.nlp = spacy.load('ru_core_news_lg')
+        except:
+            spacy.cli.download("ru_core_news_lg")
+            self.nlp = spacy.load('ru_core_news_lg')
+        
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            context_passages: type_hints.MetricContext,
+            **kwargs
         ) -> tp.Dict[str, float]:
         hallucination_scores = []
         
@@ -154,16 +169,17 @@ class HallucinationDetectionMetric(BaseRagMetric):
 class AnswerRelevanceMetric(BaseMetric):
     def __init__(self):
         self.nli_pipeline = pipeline('zero-shot-classification')
-        
-    def __call__(self, 
-                 generated_responses: tp.List[str], 
-                 questions: tp.List[str], 
-                 context_passages: tp.List[str],
-                 reference_responses: tp.Optional[tp.List[str]]=None
+    # Добавить queries
+    def __call__(
+            self, 
+            generated_responses: type_hints.MetricResponses,
+            source_queries: type_hints.MetricQueries,
+            context_passages: type_hints.MetricContext,
+            **kwargs
         ) -> tp.Dict[str, float]:
         relevance_scores = []
         
-        for gen, question, context in zip(generated_responses, questions, context_passages):
+        for gen, question, context in zip(generated_responses, source_queries, context_passages):
             # Проверяем, отвечает ли генерация на вопрос
             answer_relevance = self.nli_pipeline(
                 gen,

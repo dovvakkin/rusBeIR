@@ -23,12 +23,21 @@ class EvaluateGeneration:
 
             # Readibility
             metrics_class.ReadabilityMetrics(),
+
+            # RAG
+            metrics_class.RAGContextRelevanceMetric(),
+            metrics_class.SourceAttributionMetric(),
+            metrics_class.FactualConsistencyMetric(),  # TODO: почистить warning-и
+            metrics_class.HallucinationDetectionMetric(),
+            metrics_class.AnswerRelevanceMetric(),
         ]
     
     def evaluate(self,
                  generated_responses: type_hints.GeneratorResults,
                  reference_responses: type_hints.GroundTruth,
                  source_queries: type_hints.Queries,
+                 retriever_results: type_hints.RetrieverResults,
+                 corpus: type_hints.Corpus,
                  metrics: tp.Optional[tp.List[metrics_class.BaseMetric]] = None
         ) -> tp.Dict[str, float]:
         """
@@ -42,10 +51,23 @@ class EvaluateGeneration:
         reference_list = []
         queries_list = []
 
+        # TODO: Нет уверенности, следует ли сюда подавать qrels вместо retrieval_results для составления context_lists
+        context_list = []
+
         for key in generated_responses.keys():
             responses_list.append(generated_responses[key])
             reference_list.append(reference_responses[key])
             queries_list.append(source_queries[key])
+
+            context = retriever_results[key]
+            context_texts = []
+            for context_key in context.keys():
+                context_texts.append(corpus[context_key]['text'])
+
+            context_list.append(
+                "\n\n".join(context_texts)
+            )
+        
         
         results = {}
         for metric in metrics:
@@ -56,7 +78,8 @@ class EvaluateGeneration:
             metric_results = metric(
                 generated_responses=responses_list, 
                 reference_responses=reference_list,
-                source_queries=queries_list
+                source_queries=queries_list,
+                context_passages=context_list,
             )
             results.update(metric_results)
                 

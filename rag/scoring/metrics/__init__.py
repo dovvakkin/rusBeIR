@@ -15,7 +15,6 @@ from rusBeIR.rag.scoring.metrics.semantic import (
 )
 
 from rusBeIR.rag.scoring.metrics.rag_specific import (
-    BaseRagMetric,
     RAGContextRelevanceMetric,
     SourceAttributionMetric,
     FactualConsistencyMetric,
@@ -32,7 +31,6 @@ from rusBeIR.rag.scoring.metrics.readibility import (
 __all__ = [
     # Базовые классы
     'BaseMetric',
-    'BaseRagMetric',
 
     # Лексические метрики
     'RougeMetric',
@@ -60,14 +58,12 @@ __all__ = [
 METRIC_GROUPS = {
     'base': [
         BaseMetric,
-        BaseRagMetric
     ],
     'lexical': [
         RougeMetric,
         BleuMetric,
         MeteorMetric,
         CIDErMetric,
-        #MoverScoreMetric,
         COMETMetric,
     ],
     'semantic': [
