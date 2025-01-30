@@ -2,6 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from utils.type_hints import RetrieverResults, GeneratorResults, Corpus, Queries, QueryPromptMaker
 from rusBeIR.rag.generator.base import BaseGenerator, default_prompt_maker
+from tqdm.autonotebook import tqdm
 
 class HFGenerator(BaseGenerator):
     def __init__(
@@ -35,7 +36,7 @@ class HFGenerator(BaseGenerator):
     ) -> GeneratorResults:
         generated_results = {}
         
-        for query_id in queries:
+        for query_id in tqdm(queries):
             prompt = query_prompt_maker(query_id, retriever_results, corpus, queries)
             
             inputs = self.tokenizer(
