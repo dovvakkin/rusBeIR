@@ -84,6 +84,10 @@ class BleuMetric(BaseMetric):
 
 
 class MeteorMetric(BaseMetric):
+
+    def __init__(self):
+        nltk.download('wordnet')
+    
     def __call__(
             self, 
             generated_responses: type_hints.MetricResponses,

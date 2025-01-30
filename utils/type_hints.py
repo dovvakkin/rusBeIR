@@ -12,3 +12,4 @@ GeneratorResults = Dict[str, str]  # query_id: answer
 MetricResponses = List[str]
 MetricReferences = List[List[str]]
 MetricQueries = List[str]
+MetricContext = List[str]
