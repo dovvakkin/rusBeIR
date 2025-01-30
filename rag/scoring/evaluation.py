@@ -9,11 +9,20 @@ class EvaluateGeneration:
     def __init__(self):
         # Default metrics
         self.default_metrics = [
+            # Lexical Metrics
             metrics_class.RougeMetric(),
             metrics_class.BleuMetric(),
             metrics_class.MeteorMetric(),
             metrics_class.CIDErMetric(),
             metrics_class.COMETMetric(),
+
+            # Semantic
+            metrics_class.BertScoreMetric(),
+            metrics_class.SemanticSimilarityMetric(),
+            metrics_class.CustomSemanticSimilairty(model_name='cointegrated/rubert-tiny2'),
+
+            # Readibility
+            metrics_class.ReadabilityMetrics(),
         ]
     
     def evaluate(self,
