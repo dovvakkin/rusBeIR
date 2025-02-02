@@ -16,12 +16,15 @@ def my_prompt_maker(
 ) -> str:
     query_doc_ids = [i[0] for i in sorted(retriever_results[query_id].items(), key=lambda x: x[1], reverse=True)]
     query_text = queries[query_id]
+
+    # hack: python3.10 does not support backslash in f-string
+    double_newline = '\n\n'
     
     return f"""
 Ты получишь на вход тексты, на основе которых нужно ответить на вопрос, который будет в конце. Не повторяй их, сразу отвечай на вопрос
 
 Тексты:
-{'\n\n'.join([corpus[doc_id]["text"] for doc_id in query_doc_ids])}
+{double_newline.join([corpus[doc_id]["text"] for doc_id in query_doc_ids])}
 
 Вопрос: {query_text}
     """
