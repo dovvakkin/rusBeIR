@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from utils.type_hints import RetrieverResults, GeneratorResults, Corpus, Queries, QueryPromptMaker
+from rusBeIR.utils.type_hints import RetrieverResults, GeneratorResults, Corpus, Queries, QueryPromptMaker
 
 def default_prompt_maker(
     query_id: str,

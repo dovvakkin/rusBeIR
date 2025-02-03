@@ -1,5 +1,5 @@
 from rusBeIR.beir.retrieval.search.base import BaseSearch
-from utils.type_hints import Corpus, Queries
+from rusBeIR.utils.type_hints import Corpus, Queries
 from rusBeIR.rag.generator.base import BaseGenerator
 from typing import Dict
 
