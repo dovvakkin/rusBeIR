@@ -6,7 +6,7 @@ from rusBeIR.rag.generator.llmtf_generator import LLMTFGenerator
 from rusBeIR.rag.rag_pipeline.rag import RAG
 from rusBeIR.beir.retrieval.search.lexical import BM25Search as BM25
 
-from utils.type_hints import RetrieverResults, Corpus, Queries
+from rusBeIR.utils.type_hints import RetrieverResults, Corpus, Queries
 
 from rusBeIR.rag.scoring.evaluation import EvaluateGeneration
 
