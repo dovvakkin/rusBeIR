@@ -1,6 +1,8 @@
 from rusBeIR.utils.format_datasets import BeirDataset
 
-from rusBeIR.rag.generator.hf_generator import HFGenerator
+from llmtf.model import HFModel
+from rusBeIR.rag.generator.llmtf_generator import LLMTFGenerator
+
 from rusBeIR.rag.rag_pipeline.rag import RAG
 from rusBeIR.beir.retrieval.search.lexical import BM25Search as BM25
 
@@ -35,7 +37,10 @@ initialize = True
 number_of_shards = 1
 
 bm25 = BM25(index_name=index_name, hostname=hostname, initialize=initialize, number_of_shards=number_of_shards)
-qwen = HFGenerator(model_name="Qwen/Qwen2.5-0.5B", batch_size=8)
+
+generator_model = HFModel(device_map='cuda:0')
+generator_model.from_pretrained('Qwen/Qwen2.5-0.5B-Instruct')
+qwen = LLMTFGenerator(generator_model)
 
 rag = RAG(bm25, qwen)
 
@@ -49,6 +54,7 @@ retriever_results, generator_results = rag.retrieve_and_generate(
     retriever_kwargs_dict={"top_k": 3},
     generator_kwargs_dict={"query_prompt_maker": my_prompt_maker}
 )
+print(generator_results)
 
 evl = EvaluateGeneration()
 print(evl.evaluate(
