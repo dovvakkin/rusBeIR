@@ -5,10 +5,12 @@ from rusBeIR.rag.generator.llmtf_generator import LLMTFGenerator
 
 from rusBeIR.rag.rag_pipeline.rag import RAG
 from rusBeIR.beir.retrieval.search.lexical import BM25Search as BM25
+from rusBeIR.retrieval.models.dummyQrelsRetriever import DummyQrelsRetriever
 
 from rusBeIR.utils.type_hints import RetrieverResults, Corpus, Queries
 
 from rusBeIR.rag.scoring.evaluation import EvaluateGeneration
+from rusBeIR.rag.scoring.metrics import RougeMetric
 
 def my_prompt_maker(
     query_id: str,
@@ -31,36 +33,60 @@ def my_prompt_maker(
 Вопрос: {query_text}
     """
 
+dataset = BeirDataset.initialize('bearberry/sberquadqa')
+
 hostname = "localhost"
 index_name = "scifact"
 initialize = True
 number_of_shards = 1
 
-bm25 = BM25(index_name=index_name, hostname=hostname, initialize=initialize, number_of_shards=number_of_shards)
+bm25_retriever = BM25(index_name=index_name, hostname=hostname, initialize=initialize, number_of_shards=number_of_shards)
+# retriever that always return qrels to eval rag generator with best possible data
+dummy_qrels_retriever = DummyQrelsRetriever(dataset.qrels)
+
 
 generator_model = HFModel(device_map='cuda:0')
 generator_model.from_pretrained('Qwen/Qwen2.5-0.5B-Instruct')
 qwen = LLMTFGenerator(generator_model)
 
-rag = RAG(bm25, qwen)
-
-dataset = BeirDataset.initialize('bearberry/sberquadqa')
+bm25_rag = RAG(bm25_retriever, qwen)
+qrels_rag = RAG(dummy_qrels_retriever, qwen)
 
 mini_queries = {q: dataset.queries[q] for q, _ in zip(dataset.queries, range(15))}
 
-retriever_results, generator_results = rag.retrieve_and_generate(
+bm25_retriever_results, bm25_generator_results = bm25_rag.retrieve_and_generate(
     dataset.corpus,
     mini_queries,
     retriever_kwargs_dict={"top_k": 3},
     generator_kwargs_dict={"query_prompt_maker": my_prompt_maker}
 )
-print(generator_results)
+
+evl = EvaluateGeneration()
+print('bm25 retriever, qwen 0.5b instruct')
+print(evl.evaluate(
+    bm25_generator_results,
+    dataset.ground_truth,
+    mini_queries,
+    bm25_retriever_results,
+    dataset.corpus,
+    metrics = [RougeMetric()]
+))
+
+print()
+print('qrels retriever, qwen 0.5b instruct')
+qrels_retriever_results, qrels_generator_results = qrels_rag.retrieve_and_generate(
+    dataset.corpus,
+    mini_queries,
+    retriever_kwargs_dict={"top_k": 3},
+    generator_kwargs_dict={"query_prompt_maker": my_prompt_maker}
+)
 
 evl = EvaluateGeneration()
 print(evl.evaluate(
-    generator_results,
+    qrels_generator_results,
     dataset.ground_truth,
     mini_queries,
-    retriever_results,
-    dataset.corpus
-))  # all metrics by default
+    qrels_retriever_results,
+    dataset.corpus,
+    metrics = [RougeMetric()]
+))

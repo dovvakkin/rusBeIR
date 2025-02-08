@@ -8,7 +8,7 @@ import rusBeIR.utils.type_hints as type_hints
 class EvaluateGeneration:
     def __init__(self):
         # Default metrics
-        self.default_metrics = [
+        self.all_metrics = [
             # Lexical Metrics
             metrics_class.RougeMetric(),
             metrics_class.BleuMetric(),
@@ -38,15 +38,11 @@ class EvaluateGeneration:
                  source_queries: type_hints.Queries,
                  retriever_results: type_hints.RetrieverResults,
                  corpus: type_hints.Corpus,
-                 metrics: tp.Optional[tp.List[metrics_class.BaseMetric]] = None
+                 metrics: tp.List[metrics_class.BaseMetric]
         ) -> tp.Dict[str, float]:
         """
         Evaluate using default metrics or overloaded set of metrics
         """
-        if metrics is None:
-            metrics = self.default_metrics
-
-        
         responses_list = []
         reference_list = []
         queries_list = []
