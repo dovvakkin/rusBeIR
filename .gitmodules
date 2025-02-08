@@ -1,0 +1,3 @@
+[submodule "llmtf_open"]
+	path = llmtf_open
+	url = https://github.com/RefalMachine/llmtf_open.git
