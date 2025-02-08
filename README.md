@@ -9,8 +9,16 @@ The datasets in the RusBEIR benchmark consist of available open-source datasets,
 NDCG@10 was choosen as a main metric, results could be found [here](https://docs.google.com/spreadsheets/d/19jUZigy-AolNOOhT0EzNggiRoEcvfqL7HRpq0bwHqXc/edit?usp=sharing).
 
 ## Installation 
-``` python
-!git clone https://github.com/kngrg/rusBeIR.git
+```sh
+git clone https://github.com/kngrg/rusBeIR.git
+
+cd rusBeIR
+
+# this will clone llmtf and export proper pythonpath
+soucre shell_scripts/init.sh
+
+# or only export pythonpath
+source shell_scripts/export_pythonpath.sh
 ``` 
 
 ##  Available Datasets
