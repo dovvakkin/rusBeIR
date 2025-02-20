@@ -7,30 +7,7 @@ import rusBeIR.utils.type_hints as type_hints
 
 class EvaluateGeneration:
     def __init__(self):
-        # Default metrics
-        self.all_metrics = [
-            # Lexical Metrics
-            metrics_class.RougeMetric(),
-            metrics_class.BleuMetric(),
-            metrics_class.MeteorMetric(),
-            metrics_class.CIDErMetric(),
-            metrics_class.COMETMetric(),
-
-            # Semantic
-            metrics_class.BertScoreMetric(),
-            metrics_class.SemanticSimilarityMetric(),
-            metrics_class.CustomSemanticSimilairty(model_name='cointegrated/rubert-tiny2'),
-
-            # Readibility
-            metrics_class.ReadabilityMetrics(),
-
-            # RAG
-            metrics_class.RAGContextRelevanceMetric(),
-            metrics_class.SourceAttributionMetric(),
-            metrics_class.FactualConsistencyMetric(),  # TODO: почистить warning-и
-            metrics_class.HallucinationDetectionMetric(),
-            metrics_class.AnswerRelevanceMetric(),
-        ]
+        pass
     
     def evaluate(self,
                  generated_responses: type_hints.GeneratorResults,

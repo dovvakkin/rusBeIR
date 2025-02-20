@@ -46,8 +46,6 @@ class LLMTFGenerator(BaseGenerator):
             for i in range(len(res)):
                 generated[i] += res[i]
 
-        print(len(generated))
-        
         for query_id, generated_result in zip(query_ids, generated[1]):
             generated_results[query_id] = generated_result
             
