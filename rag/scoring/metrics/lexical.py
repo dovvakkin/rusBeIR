@@ -21,7 +21,7 @@ from rusBeIR.utils.processors import (
 
 class RougeMetric(BaseMetric):
     def __init__(self):
-        self.scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+        self.scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'])
         
     def __call__(
             self, 
@@ -78,7 +78,7 @@ class BleuMetric(BaseMetric):
         scores = []
         
         for gen, all_ref in zip(generated_responses, reference_responses):
-            
+
             if text_preprocessor is not None:
                 gen = text_preprocessor(gen)
                 all_ref = [text_preprocessor(ref) for ref in all_ref]
