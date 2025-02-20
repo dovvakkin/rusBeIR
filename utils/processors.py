@@ -198,7 +198,7 @@ class NatashaVerbExtractor(NatashaBaseProcessor):
                         if token.pos == 'VERB'])
     
 
-class TextProcessor:
+class TextProcessor(BaseProcessor):
 
     def __init__(self, processors: Optional[List]=None):
         self.processors = processors
