@@ -20,7 +20,7 @@ class RougeMetric(BaseMetric):
 
     def __init__(
             self,
-            preprocessor = tp.Optional[BaseProcessor]=None
+            preprocessor: tp.Optional[BaseProcessor]=None
         ):
         self.scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'])
         self.preprocessor = preprocessor
@@ -71,7 +71,7 @@ class BleuMetric(BaseMetric):
 
     def __init__(
             self, 
-            preprocessor = tp.Optional[BaseProcessor]=None
+            preprocessor: tp.Optional[BaseProcessor]=None
         ):
         self.preprocessor = preprocessor
 
