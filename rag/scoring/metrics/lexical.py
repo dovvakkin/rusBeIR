@@ -14,6 +14,10 @@ from nltk.translate.meteor_score import meteor_score
 
 from rusBeIR.rag.scoring.metrics.base import BaseMetric
 import rusBeIR.utils.type_hints as type_hints
+from rusBeIR.utils.processors import (
+    BaseProcessor,
+    TextProcessor
+)
 
 class RougeMetric(BaseMetric):
     def __init__(self):
@@ -23,6 +27,7 @@ class RougeMetric(BaseMetric):
             self, 
             generated_responses: type_hints.MetricResponses,
             reference_responses: type_hints.MetricReferences,
+            text_preprocessor: tp.Optional[BaseProcessor]=None,
             **kwargs
         ) -> tp.Dict[str, float]:
         scores = {
@@ -38,6 +43,10 @@ class RougeMetric(BaseMetric):
         }
         
         for gen, all_ref in zip(generated_responses, reference_responses):
+
+            if text_preprocessor is not None:
+                gen = text_preprocessor(gen)
+                all_ref = [text_preprocessor(ref) for ref in all_ref]
             
             results = [self.scorer.score(gen, ref) for ref in all_ref]
             
@@ -62,12 +71,17 @@ class BleuMetric(BaseMetric):
             self, 
             generated_responses: type_hints.MetricResponses,
             reference_responses: type_hints.MetricReferences,
+            text_preprocessor: tp.Optional[BaseProcessor]=None,
             **kwargs
         ) -> tp.Dict[str, float]:
         smooth = SmoothingFunction()
         scores = []
         
         for gen, all_ref in zip(generated_responses, reference_responses):
+            
+            if text_preprocessor is not None:
+                gen = text_preprocessor(gen)
+                all_ref = [text_preprocessor(ref) for ref in all_ref]
 
             intermediate_scores = []
 
