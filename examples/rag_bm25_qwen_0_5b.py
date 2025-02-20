@@ -78,7 +78,7 @@ qrels_retriever_results, qrels_generator_results = qrels_rag.retrieve_and_genera
     dataset.corpus,
     mini_queries,
     retriever_kwargs_dict={"top_k": 3},
-    generator_kwargs_dict={"query_prompt_maker": my_prompt_maker}
+    generator_kwargs_dict={"query_prompt_maker": my_prompt_maker, "batch_size": 5, "disable_tqdm": True}
 )
 
 evl = EvaluateGeneration()
