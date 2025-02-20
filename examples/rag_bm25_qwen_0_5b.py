@@ -71,6 +71,10 @@ bm25_retriever_results, bm25_generator_results = bm25_rag.retrieve_and_generate(
 
 
 evl = EvaluateGeneration()
+preprocessor = TextProcessor(
+    processors=[NatashaPunctuationRemover(), LowerCaseProcessor()]
+)
+metrics = [RougeMetric(preprocessor=preprocessor)]
 print('bm25 retriever, qwen 0.5b instruct')
 print(evl.evaluate(
     bm25_generator_results,
@@ -78,7 +82,7 @@ print(evl.evaluate(
     mini_queries,
     bm25_retriever_results,
     dataset.corpus,
-    metrics = [RougeMetric()]
+    metrics = metrics
 ))
 
 print()
@@ -90,12 +94,6 @@ qrels_retriever_results, qrels_generator_results = qrels_rag.retrieve_and_genera
     generator_kwargs_dict={"query_prompt_maker": my_prompt_maker, "batch_size": 5, "disable_tqdm": True}
 )
 
-with open("dummy_json_1.json", "w") as f:
-    json.dump(qrels_generator_results, f)
-
-with open("dummy_gt.json", "w") as f:
-    json.dump(dataset.ground_truth, f)
-
 evl = EvaluateGeneration()
 print(evl.evaluate(
     qrels_generator_results,
@@ -103,68 +101,5 @@ print(evl.evaluate(
     mini_queries,
     qrels_retriever_results,
     dataset.corpus,
-    metrics = [RougeMetric()]
-))
-
-# Пример процессинга текстов (дефолтное поведение)
-processor = TextProcessor()
-
-qrels_processed_generator_results = {
-    k: processor(v) for k, v in zip(
-    qrels_generator_results.keys(),
-    qrels_generator_results.values()
-)}
-
-ground_truth_processed_results = {
-    k: processor(v) for k, v in zip(
-        dataset.ground_truth.keys(),
-        dataset.ground_truth.values()
-    )
-    if k in qrels_generator_results.keys()
-}
-
-print()
-print("Результаты при дефолтном процессинге")
-print()
-
-print(evl.evaluate(
-    qrels_processed_generator_results,
-    ground_truth_processed_results,
-    mini_queries,
-    qrels_retriever_results,
-    dataset.corpus,
-    metrics = [RougeMetric()]
-))
-
-# Пример процессинга текстов (задаваемые вручную функции)
-
-processor = TextProcessor(
-    processors=[NatashaPunctuationRemover(), LowerCaseProcessor()]
-)
-
-qrels_processed_generator_results = {
-    k: processor(v) for k, v in zip(
-    qrels_generator_results.keys(),
-    qrels_generator_results.values()
-)}
-
-ground_truth_processed_results = {
-    k: processor(v) for k, v in zip(
-        dataset.ground_truth.keys(),
-        dataset.ground_truth.values()
-    )
-    if k in qrels_generator_results.keys()
-}
-
-print()
-print("Результаты при кастомном процессинге")
-print()
-
-print(evl.evaluate(
-    qrels_processed_generator_results,
-    ground_truth_processed_results,
-    mini_queries,
-    qrels_retriever_results,
-    dataset.corpus,
-    metrics = [RougeMetric()]
+    metrics = metrics
 ))
