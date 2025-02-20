@@ -8,17 +8,17 @@ from nltk.stem import PorterStemmer
 from nltk.stem import LancasterStemmer
 from nltk.stem import WordNetLemmatizer
 
-from pymystem3 import Mystem # pip install pymystem
-
 from langdetect import detect # pip install langdetect
+
 from natasha import (
     Segmenter,
     MorphVocab,
     NewsEmbedding,
     NewsMorphTagger,
+    NewsSyntaxParser,
+    NewsNERTagger,
     Doc
 )
-
 
 class BaseProcessor(ABC):
     @abstractmethod
@@ -55,13 +55,7 @@ class HTMLTagsRemoverProcessor(BaseProcessor):
 
 class EmoticonRemoverProcessor(BaseProcessor):
     def __call__(self, text: str) -> str:
-        # Простой пример удаления эмотиконов
         return re.sub(r'[:;=]-[()DP]', '', text)
-
-class TextNormalizerProcessor(BaseProcessor):
-    def __call__(self, text: str) -> str:
-        # Нормализация повторяющихся букв (например, "hellooooo" -> "hello")
-        return re.sub(r'(.)\1+', r'\1', text)
     
 
 # --- Класс базового препроцессинга
@@ -94,15 +88,6 @@ class StopWordsRemoverProcessor(BaseProcessor):
     
 
 # --- Лемматизация и стэмминг
-
-class StemmerProcessor(BaseProcessor):
-    def __init__(self):
-        self.stemmer = PorterStemmer()
-
-    def __call__(self, text: str) -> str:
-        words = text.split()
-        return " ".join([self.stemmer.stem(word) for word in words])
-
 class LemmatisationProcessor(BaseProcessor):
     def __init__(self):
         self.lemmatizer = WordNetLemmatizer()
@@ -112,10 +97,7 @@ class LemmatisationProcessor(BaseProcessor):
         return " ".join([self.lemmatizer.lemmatize(word) for word in words])
     
 
-# --- Обработка английского языка ---
-
-    
-class EnglishStemmer(BaseProcessor):
+class StemmerProcessor(BaseProcessor):
     def __init__(self, stemmer_type='porter'):
         self.stemmer = PorterStemmer() if stemmer_type == 'porter' else LancasterStemmer()
 
@@ -125,29 +107,96 @@ class EnglishStemmer(BaseProcessor):
 
 # --- Обработка русского языка ---
 
-class RussianLemmatizer(BaseProcessor):
+class NatashaBaseProcessor(BaseProcessor):
+    """
+    Базовый процессор Natasha, который инициализирует все необходимые компоненты
+    """
     def __init__(self):
-        self.mystem = Mystem()
-
-    def __call__(self, text: str) -> str:
-        lemmas = self.mystem.lemmatize(text)
-        return ''.join(lemmas).strip()
-    
-
-class RussianNatashaProcessor(BaseProcessor):
-    def init(self):
         self.segmenter = Segmenter()
         self.morph_vocab = MorphVocab()
         self.emb = NewsEmbedding()
         self.morph_tagger = NewsMorphTagger(self.emb)
+        self.syntax_parser = NewsSyntaxParser(self.emb)
+        self.ner_tagger = NewsNERTagger(self.emb)
 
-    def call(self, text: str) -> str:
+    def prepare_doc(self, text: str) -> Doc:
         doc = Doc(text)
         doc.segment(self.segmenter)
         doc.tag_morph(self.morph_tagger)
+        doc.parse_syntax(self.syntax_parser)
+        doc.tag_ner(self.ner_tagger)
         for token in doc.tokens:
             token.lemmatize(self.morph_vocab)
+        return doc
+
+class NatashaLemmatizer(NatashaBaseProcessor):
+    """
+    Лемматизация текста
+    """
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
         return ' '.join([token.lemma for token in doc.tokens])
+
+class NatashaNormalizer(NatashaBaseProcessor):
+    """
+    Нормализация текста (приведение к нормальной форме)
+    """
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
+        return ' '.join([token.normalized for token in doc.tokens if token.normalized])
+
+class NatashaStopWordsRemover(NatashaBaseProcessor):
+    """
+    Удаление стоп-слов на основе частей речи
+    """
+    def __init__(self):
+        super().init()
+        self.stop_pos = {'PREP', 'CONJ', 'PRCL', 'INTJ'}  # предлоги, союзы, частицы, междометия
+
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
+        return ' '.join([token.text for token in doc.tokens 
+                        if token.pos not in self.stop_pos])
+
+class NatashaNamedEntityRemover(NatashaBaseProcessor):
+    """
+    Удаление именованных сущностей (имена, организации, локации и т.д.)
+    """
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
+        spans_to_remove = set()
+        for span in doc.spans:
+            spans_to_remove.update(range(span.start, span.stop))
+        
+        return ' '.join([token.text for i, token in enumerate(doc.tokens)
+                        if i not in spans_to_remove])
+
+class NatashaPunctuationRemover(NatashaBaseProcessor):
+    """
+    Удаление знаков пунктуации
+    """
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
+        return ' '.join([token.text for token in doc.tokens 
+                        if token.pos != 'PUNCT'])
+
+class NatashaNounExtractor(NatashaBaseProcessor):
+    """
+    Извлечение только существительных
+    """
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
+        return ' '.join([token.text for token in doc.tokens 
+                        if token.pos == 'NOUN'])
+
+class NatashaVerbExtractor(NatashaBaseProcessor):
+    """
+    Извлечение только глаголов
+    """
+    def __call__(self, text: str) -> str:
+        doc = self.prepare_doc(text)
+        return ' '.join([token.text for token in doc.tokens 
+                        if token.pos == 'VERB'])
     
 
 class TextProcessor:
@@ -169,15 +218,16 @@ class TextProcessor:
             language = detect(text)
             if (type(language) == str) and (language == 'ru'):
                 processors = [
-                    BasicProcessor(),
-                    StopWordsRemoverProcessor(language='russian'),
-                    RussianLemmatizer()
+                    NatashaPunctuationRemover(),
+                    NatashaStopWordsRemover(),
+                    NatashaLemmatizer(),
+                    LowerCaseProcessor()
                 ]
             else:
                 processors = [
                     BasicProcessor(),
                     StopWordsRemoverProcessor(language='english'),
-                    EnglishStemmer()
+                    StemmerProcessor()
                 ]
 
         for processor in processors:
