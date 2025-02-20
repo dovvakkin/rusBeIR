@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import re
 import string
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import nltk
 from nltk.stem import PorterStemmer
@@ -64,7 +64,6 @@ class BasicProcessor(BaseProcessor):
         self.processors = [
             LowerCaseProcessor(),
             PunctuationRemoverProcessor(),
-            NumberRemoverProcessor(),
             WhitespaceNormalizerProcessor()
         ]
 
@@ -150,7 +149,7 @@ class NatashaStopWordsRemover(NatashaBaseProcessor):
     Удаление стоп-слов на основе частей речи
     """
     def __init__(self):
-        super().init()
+        super().__init__()
         self.stop_pos = {'PREP', 'CONJ', 'PRCL', 'INTJ'}  # предлоги, союзы, частицы, междометия
 
     def __call__(self, text: str) -> str:
@@ -204,7 +203,22 @@ class TextProcessor:
     def __init__(self, processors: Optional[List]=None):
         self.processors = processors
 
-    def __call__(self, text: str) -> str:
+        if self.processors is None:
+            self._ru_processors = [
+                NatashaPunctuationRemover(),
+                NatashaStopWordsRemover(),
+                NatashaLemmatizer(),
+                LowerCaseProcessor()
+            ]
+
+            self._en_processors = [
+                BasicProcessor(),
+                StopWordsRemoverProcessor(language='english'),
+                StemmerProcessor()
+            ]
+
+
+    def __call__(self, text: Union[str, List[str]]) -> Union[str, List[str]]:
         """
             Two Behaviours:
 
@@ -215,22 +229,19 @@ class TextProcessor:
         if self.processors is not None:
             processors = self.processors
         else:
-            language = detect(text)
+            try:
+                language = detect(text)
+            except:
+                language = 'en'
             if (type(language) == str) and (language == 'ru'):
-                processors = [
-                    NatashaPunctuationRemover(),
-                    NatashaStopWordsRemover(),
-                    NatashaLemmatizer(),
-                    LowerCaseProcessor()
-                ]
+                processors = self._ru_processors
             else:
-                processors = [
-                    BasicProcessor(),
-                    StopWordsRemoverProcessor(language='english'),
-                    StemmerProcessor()
-                ]
+                processors = self._en_processors
 
         for processor in processors:
-            text = processor(text)
+            if type(text) == str:
+                text = processor(text)
+            else:
+                text = [processor(subtext) for subtext in text]
         
         return text
